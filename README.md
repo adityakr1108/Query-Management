@@ -1,6 +1,7 @@
 Welcome to Your Project
 Project Overview
-Live Deployment: Query Management
+Live Deployment: [Query Management](https://query-management-adityakr1108s-projects.vercel.app/)
+
 
 This project is built using modern web technologies to ensure high performance, scalability, and a seamless user experience.
 
