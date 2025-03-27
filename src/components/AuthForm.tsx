@@ -8,7 +8,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Mail, Lock, User } from 'lucide-react';
 
 // Define admin credentials
-const ADMIN_EMAIL = "admin";
+const ADMIN_EMAIL = "admin@test.com";
 const ADMIN_PASSWORD = "admin123";
 
 interface AuthFormProps {
