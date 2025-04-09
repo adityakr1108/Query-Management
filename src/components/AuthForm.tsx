@@ -9,7 +9,7 @@ import { ArrowRight, Mail, Lock, User } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
 
 // Define admin credentials
-const ADMIN_EMAIL = "admin@leadflow.com";
+const ADMIN_EMAIL = "admin@test.com";
 const ADMIN_PASSWORD = "admin123";
 
 interface AuthFormProps {
