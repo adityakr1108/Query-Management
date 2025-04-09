@@ -1,69 +1,115 @@
-# Welcome to your Lovable project
+# Query Management System
 
-## Project info
+A full-stack Query Management System designed to streamline the handling of user queries, built with **React**, **Node.js**, **Express**, and **MongoDB**.
 
-**URL**: https://lovable.dev/projects/13edc2e6-ff34-42cd-99d6-113a82a5daae
+## 🚀 Features
 
-## How can I edit this code?
+- User Registration and Login
+- Admin & User Dashboards
+- Submit, View, and Track Queries
+- Admin Management of All Queries
+- Role-based Access Control
+- RESTful API Integration
+- Authentication with JWT
 
-There are several ways of editing your application.
+## 🛠️ Tech Stack
 
-**Use Lovable**
+**Frontend:**
+- React.js
+- Tailwind CSS
+- Axios
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/13edc2e6-ff34-42cd-99d6-113a82a5daae) and start prompting.
+**Backend:**
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+- JSON Web Tokens (JWT)
+- bcrypt.js
 
-Changes made via Lovable will be committed automatically to this repo.
+## 📁 Project Structure
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+Query-Management/
+│
+├── backend/                # Express server & MongoDB integration
+│   ├── controllers/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   └── server.js
+│
+├── frontend/               # React application
+│   ├── public/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── App.js
+│   └── tailwind.config.js
+│
+├── .gitignore
+├── README.md
+└── package.json
 ```
 
-**Edit a file directly in GitHub**
+## 💡 How to Run the Project
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 1. Clone the Repository
 
-**Use GitHub Codespaces**
+```bash
+git clone https://github.com/adityakr1108/Query-Management.git
+cd Query-Management
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 2. Backend Setup
 
-## What technologies are used for this project?
+```bash
+cd backend
+npm install
+npm start
+```
 
-This project is built with .
+> Backend will run on `http://localhost:5000`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 3. Frontend Setup
 
-## How can I deploy this project?
+```bash
+cd frontend
+npm install
+npm start
+```
 
-Simply open [Lovable](https://lovable.dev/projects/13edc2e6-ff34-42cd-99d6-113a82a5daae) and click on Share -> Publish.
+> Frontend will run on `http://localhost:3000`
 
-## I want to use a custom domain - is that possible?
+## 🔐 Environment Variables
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+Create a `.env` file inside the `backend/` directory:
+
+```
+PORT=5000
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=your_jwt_secret
+```
+
+## 🧪 Admin Test Credentials
+
+Use the following credentials to log in as an admin:
+
+```
+ADMIN_EMAIL = "admin@test.com"
+ADMIN_PASSWORD = "admin123"
+```
+
+## 👤 Author
+
+- [Aditya Kumar](https://github.com/adityakr1108)
+
+## 📝 License
+
+This project is licensed under the MIT License.
+
+---
+
+Feel free to contribute or fork the project!
+
