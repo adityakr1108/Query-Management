@@ -15,6 +15,7 @@ import Pricing from "./pages/Pricing";
 import WhatsAppIntegration from "./pages/WhatsAppIntegration";
 import Learn from "./pages/Learn";
 import NotFound from "./pages/NotFound";
+import { Analytics } from "@vercel/analytics/react"
 
 const queryClient = new QueryClient();
 
