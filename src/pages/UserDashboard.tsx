@@ -94,33 +94,10 @@ const UserDashboard = () => {
   };
 
   const handleLeadAdded = async (data: any) => {
-    try {
-      // Create a new lead with the form data and ensure user's name is used
-      await leadsService.addLead({
-        name: user?.name || 'User',
-        email: userEmail,
-        requestType: data.requestType,
-        message: data.message,
-        status: 'new',
-        isGuest: false
-      }, false); // false means it's a registered user's lead, not a guest
-      
-      toast({
-        title: "Success",
-        description: "Your request has been submitted successfully",
-      });
-      
-      // Refresh leads data and close the form
-      fetchLeads();
-      setShowNewRequestForm(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to submit your request",
-        variant: "destructive",
-      });
-      console.error("Error submitting request:", error);
-    }
+    // We only need to refresh the leads, not create a new one
+    // The lead is already created by the NewLeadForm component
+    fetchLeads();
+    setShowNewRequestForm(false);
   };
 
   const markNotificationAsRead = (id: number) => {

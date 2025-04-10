@@ -33,8 +33,18 @@ const LeadCard = ({ lead, isAdmin = false, onLeadUpdated }: LeadCardProps) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
+  // Function to get interaction count safely regardless of type
+  const getInteractionCount = () => {
+    if (typeof lead.interactions === 'number') {
+      return lead.interactions;
+    } else if (Array.isArray(lead.interactions)) {
+      return lead.interactions.length;
+    }
+    return 0;
+  };
+
   return (
-    <Card className="overflow-hidden transition-all duration-300 hover:shadow-md border border-gray-100">
+    <Card className="overflow-hidden transition-all duration-300 hover:shadow-md border border-gray-100 w-full">
       <CardHeader className="p-4 pb-0 flex flex-row items-start justify-between space-y-0">
         <div className="flex items-center space-x-3">
           <Avatar className="h-10 w-10">
@@ -80,7 +90,7 @@ const LeadCard = ({ lead, isAdmin = false, onLeadUpdated }: LeadCardProps) => {
             <span className="text-xs text-gray-500 mb-1">Interactions</span>
             <span className="text-sm text-gray-700 flex items-center">
               <MessageSquare size={14} className="mr-1 text-gray-500" />
-              {lead.interactions}
+              {getInteractionCount()}
             </span>
           </div>
         </div>

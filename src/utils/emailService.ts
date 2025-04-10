@@ -1,5 +1,4 @@
 
-// Email notification service
 
 import { toast } from "sonner";
 import { Lead } from "./leadsService";
@@ -23,9 +22,9 @@ export interface EmailOptions {
 
 const sendViaEmailJS = async (params: EmailJSParams): Promise<boolean> => {
   try {
-    const serviceId = 'service_leadflow'; // Replace with your EmailJS service ID
-    const templateId = 'template_leadflow'; // Replace with your EmailJS template ID
-    const userId = 'user_yourUserId'; // Replace with your EmailJS user ID
+    const serviceId = 'service_6jqonbv'; // Your EmailJS service ID
+    const templateId = 'template_yfv01xk'; // Your EmailJS template ID
+    const publicKey = 'wMRmJGGYBbGjupSlf'; // PublicKey - you should replace this with your actual public key
 
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
@@ -35,12 +34,18 @@ const sendViaEmailJS = async (params: EmailJSParams): Promise<boolean> => {
       body: JSON.stringify({
         service_id: serviceId,
         template_id: templateId,
-        user_id: userId,
+        user_id: publicKey,
         template_params: params
       })
     });
 
-    return response.ok;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('EmailJS error:', errorText);
+      return false;
+    }
+
+    return true;
   } catch (error) {
     console.error('Error sending email via EmailJS:', error);
     return false;

@@ -83,6 +83,18 @@ const LeadDetailDialog = ({ leadId, isAdmin = false, onLeadUpdated, trigger }: L
     if (score >= 40) return 'text-blue-600 bg-blue-50';
     return 'text-gray-600 bg-gray-50';
   };
+  
+  // Function to get interaction count safely regardless of type
+  const getInteractionCount = () => {
+    if (!lead) return 0;
+    
+    if (typeof lead.interactions === 'number') {
+      return lead.interactions;
+    } else if (Array.isArray(lead.interactions)) {
+      return lead.interactions.length;
+    }
+    return 0;
+  };
 
   // Handle SelectValue change with type safety
   const handleSelectChange = (value: string) => {
@@ -152,7 +164,7 @@ const LeadDetailDialog = ({ leadId, isAdmin = false, onLeadUpdated, trigger }: L
                 <span className="text-sm text-gray-500 mb-1">Interactions</span>
                 <span className="text-sm text-gray-700 flex items-center">
                   <MessageSquare size={14} className="mr-2 text-gray-500" />
-                  {lead.interactions}
+                  {getInteractionCount()}
                 </span>
               </div>
             </div>

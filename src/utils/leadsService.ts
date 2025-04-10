@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { teamService } from "./teamService";
 import { emailService } from "./emailService";
@@ -13,7 +14,7 @@ export interface Lead {
   lastActivity: string;
   requestType: string;
   message: string;
-  interactions: number;
+  interactions: number | { message: string; isAdmin: boolean; timestamp: string }[];
   isGuest?: boolean; // Property to identify guest vs logged-in user leads
   assignedTeamMemberId?: string; // ID of the team member assigned to this lead
   createdById?: string; // ID of the user who created this lead
@@ -215,15 +216,27 @@ export const leadsService = {
         
         const teamMemberId = leads[index].assignedTeamMemberId;
         
-        // Find a new lead to assign
-        const newLeadsForAssignment = await leadsService.getUnassignedLeads();
-        const newLeadToAssign = newLeadsForAssignment.find(l => 
-          l.status !== 'converted' && 
-          l.status !== 'lost'
-        );
+        // Check if the team member has less than 10 leads before assigning a new one
+        const teamMemberLeads = await leadsService.getLeadsForTeamMember(teamMemberId);
         
-        if (newLeadToAssign) {
-          await leadsService.assignLeadToTeamMember(newLeadToAssign.id, teamMemberId);
+        // Remove the current lead (which is now converted/lost) from the count
+        const activeLeadCount = teamMemberLeads.filter(l => 
+          l.id !== id && l.status !== 'converted' && l.status !== 'lost'
+        ).length;
+        
+        // Only assign a new lead if the team member has less than 10 active leads
+        if (activeLeadCount < 9) { // 9 because we're removing one and adding one
+          // Find a new lead to assign
+          const newLeadsForAssignment = await leadsService.getUnassignedLeads();
+          const newLeadToAssign = newLeadsForAssignment.find(l => 
+            l.status !== 'converted' && 
+            l.status !== 'lost'
+          );
+          
+          if (newLeadToAssign) {
+            await leadsService.assignLeadToTeamMember(newLeadToAssign.id, teamMemberId);
+            toast.success(`A new lead has been automatically assigned to replace the ${status} lead`);
+          }
         }
       }
       
@@ -291,11 +304,27 @@ export const leadsService = {
     await delay(400);
     const index = leads.findIndex(lead => lead.id === id);
     if (index !== -1) {
-      leads[index] = { 
-        ...leads[index], 
-        interactions: leads[index].interactions + 1,
-        lastActivity: 'Just now'
-      };
+      // Handle different interaction types (number or array)
+      if (typeof leads[index].interactions === 'number') {
+        // If interactions is a number, increment it
+        leads[index] = { 
+          ...leads[index], 
+          interactions: (leads[index].interactions as number) + 1,
+          lastActivity: 'Just now'
+        };
+      } else if (Array.isArray(leads[index].interactions)) {
+        // If interactions is an array, push new interaction
+        (leads[index].interactions as Array<{message: string; isAdmin: boolean; timestamp: string}>).push({
+          message,
+          isAdmin: true,
+          timestamp: new Date().toLocaleTimeString()
+        });
+        leads[index] = {
+          ...leads[index],
+          lastActivity: 'Just now'
+        };
+      }
+      
       saveLeads(leads);
       toast.success("Interaction recorded");
       return leads[index];
@@ -307,6 +336,18 @@ export const leadsService = {
   // Assign lead to team member
   assignLeadToTeamMember: async (leadId: string, teamMemberId: string): Promise<Lead | undefined> => {
     await delay(600);
+    
+    // Check if team member already has 10 leads
+    const currentAssignedLeads = await leadsService.getLeadsForTeamMember(teamMemberId);
+    const activeAssignedLeads = currentAssignedLeads.filter(lead => 
+      lead.status !== 'converted' && lead.status !== 'lost'
+    );
+    
+    if (activeAssignedLeads.length >= 10) {
+      toast.error("Team member already has the maximum allowed leads (10)");
+      return undefined;
+    }
+    
     const index = leads.findIndex(lead => lead.id === leadId);
     
     if (index !== -1) {
