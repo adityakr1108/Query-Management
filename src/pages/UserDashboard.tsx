@@ -9,7 +9,6 @@ import {
   MessagesSquare,
   UserCircle,
   LogOut,
-  BarChartBig,
   Mail,
   Settings,
   PlusCircle,
@@ -20,8 +19,8 @@ import {
   CheckCircle2,
   Clock
 } from 'lucide-react';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { LeadStatus, leadsService } from '@/utils/leadsService';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { leadsService } from '@/utils/leadsService';
 import LeadCard from '@/components/LeadCard';
 import MessageCenter from '@/components/messages/MessageCenter';
 import { useUser } from '@/context/UserContext';
@@ -38,39 +37,30 @@ const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [leads, setLeads] = useState<any[]>([]);
   const [isLoadingLeads, setIsLoadingLeads] = useState(true);
-  const userEmail = user?.email || '';
   const [completedTasks, setCompletedTasks] = useState(0);
   const [progressValue, setProgressValue] = useState(0);
   const [showNewRequestForm, setShowNewRequestForm] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: "Your request has been reviewed", time: "1 hour ago", read: false },
-    { id: 2, message: "New message from support team", time: "3 hours ago", read: false },
-    { id: 3, message: "Request status changed to 'Qualified'", time: "Yesterday", read: true }
-  ]);
+  const [notifications, setNotifications] = useState<{ id: string; message: string; time: string; read: boolean }[]>([]);
 
   useEffect(() => {
-    // Simulate progress animation
     const timer = setTimeout(() => setProgressValue(75), 500);
     return () => clearTimeout(timer);
   }, []);
 
   const fetchLeads = async () => {
+    if (!user) return;
     setIsLoadingLeads(true);
     try {
-      const userLeads = await leadsService.getUserLeads(userEmail);
+      const userLeads = await leadsService.getUserLeads(user.id);
       setLeads(userLeads);
-      
-      // Calculate completed tasks based on converted leads
       const completed = userLeads.filter(lead => lead.status === 'converted').length;
       setCompletedTasks(completed);
-      
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to fetch requests data",
         variant: "destructive",
       });
-      console.error("Error fetching requests:", error);
     } finally {
       setIsLoadingLeads(false);
     }
@@ -78,10 +68,10 @@ const UserDashboard = () => {
 
   useEffect(() => {
     fetchLeads();
-  }, [userEmail]);
+  }, [user?.id]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     toast({
       title: "Logged out",
       description: "You have been logged out successfully",
@@ -100,9 +90,9 @@ const UserDashboard = () => {
     setShowNewRequestForm(false);
   };
 
-  const markNotificationAsRead = (id: number) => {
+  const markNotificationAsRead = (id: string) => {
     setNotifications(
-      notifications.map(notification => 
+      notifications.map(notification =>
         notification.id === id ? { ...notification, read: true } : notification
       )
     );
@@ -125,7 +115,6 @@ const UserDashboard = () => {
               </Button>
             </div>
             <Avatar className="h-8 w-8">
-              <AvatarImage src="/placeholder.svg" />
               <AvatarFallback className="bg-primary text-white">
                 {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'US'}
               </AvatarFallback>
@@ -585,7 +574,7 @@ const UserDashboard = () => {
               )}
               
               {activeTab === 'messages' && (
-                <MessageCenter isUserDashboard={true} userEmail={userEmail} />
+                <MessageCenter isUserDashboard={true} />
               )}
               
               {activeTab === 'profile' && (

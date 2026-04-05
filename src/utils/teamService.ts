@@ -1,156 +1,142 @@
 
-// Team management service to handle team members and assignments
-
-import { toast } from "sonner";
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 export interface TeamMember {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: string;        // role_title e.g. "Sales Rep"
   active: boolean;
-  assignedLeads: string[]; // Array of lead IDs assigned to this team member
+  assignedLeads: string[];
 }
 
-// Get initial team members from localStorage or use empty array
-const getStoredTeamMembers = (): TeamMember[] => {
-  const storedTeamMembers = localStorage.getItem('leadflow_team_members');
-  if (storedTeamMembers) {
-    try {
-      return JSON.parse(storedTeamMembers);
-    } catch (error) {
-      console.error('Error parsing stored team members:', error);
-      return [];
-    }
-  }
-  return [];
-};
-
-// Save team members to localStorage
-const saveTeamMembers = (teamMembers: TeamMember[]) => {
-  localStorage.setItem('leadflow_team_members', JSON.stringify(teamMembers));
-};
-
-// Initialize with stored data
-let teamMembers = getStoredTeamMembers();
-
-// Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// Map DB profile row → TeamMember
+const mapProfile = (row: any, assignedLeads: string[] = []): TeamMember => ({
+  id: row.id,
+  name: row.name,
+  email: row.email,
+  role: row.role_title ?? 'Employee',
+  active: row.active ?? true,
+  assignedLeads,
+});
 
 export const teamService = {
-  // Get all team members
+  // ── Get all employees ────────────────────────────────────────
   getTeamMembers: async (): Promise<TeamMember[]> => {
-    await delay(500);
-    return [...teamMembers];
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'employee')
+      .order('created_at', { ascending: false });
+
+    if (error) { console.error(error); return []; }
+
+    // Fetch assigned query IDs for each employee
+    const members = await Promise.all(
+      (profiles ?? []).map(async (p) => {
+        const { data: queries } = await supabase
+          .from('queries')
+          .select('id')
+          .eq('assigned_to_id', p.id);
+        return mapProfile(p, (queries ?? []).map((q: any) => q.id));
+      })
+    );
+    return members;
   },
 
-  // Get team member by ID
+  // ── Get employee by ID ───────────────────────────────────────
   getTeamMemberById: async (id: string): Promise<TeamMember | undefined> => {
-    await delay(300);
-    return teamMembers.find(member => member.id === id);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .eq('role', 'employee')
+      .single();
+
+    if (error || !data) return undefined;
+
+    const { data: queries } = await supabase
+      .from('queries').select('id').eq('assigned_to_id', id);
+
+    return mapProfile(data, (queries ?? []).map((q: any) => q.id));
   },
 
-  // Add new team member
-  addTeamMember: async (member: Omit<TeamMember, 'id' | 'assignedLeads'>): Promise<TeamMember> => {
-    await delay(600);
-    const id = Math.random().toString(36).substring(2, 9);
-    
-    const newMember: TeamMember = {
-      id,
-      name: member.name,
-      email: member.email,
-      role: member.role,
-      active: member.active,
-      assignedLeads: []
-    };
-    
-    teamMembers = [...teamMembers, newMember];
-    saveTeamMembers(teamMembers);
-    toast.success("Team member added successfully");
-    return newMember;
-  },
-
-  // Update team member
-  updateTeamMember: async (id: string, updates: Partial<Omit<TeamMember, 'id'>>): Promise<TeamMember | undefined> => {
-    await delay(500);
-    const index = teamMembers.findIndex(member => member.id === id);
-    
-    if (index !== -1) {
-      teamMembers[index] = { ...teamMembers[index], ...updates };
-      saveTeamMembers(teamMembers);
-      toast.success("Team member updated successfully");
-      return teamMembers[index];
+  // ── Promote a user to employee by email ──────────────────────
+  addTeamMember: async (member: { email: string; name: string; role: string; active: boolean }): Promise<TeamMember | undefined> => {
+    // Promote the user with this email to 'employee' role
+    const { error } = await supabase.rpc('promote_to_employee', { target_email: member.email });
+    if (error) {
+      toast.error(`Could not promote: ${error.message}`);
+      return undefined;
     }
-    
-    toast.error("Failed to update team member");
-    return undefined;
+
+    // Fetch the newly promoted profile
+    const { data } = await supabase.from('profiles').select('*').eq('email', member.email).single();
+    if (!data) return undefined;
+
+    toast.success(`${data.name} added as employee`);
+    return mapProfile(data, []);
   },
 
-  // Delete team member
+  // ── Update employee profile ───────────────────────────────────
+  updateTeamMember: async (id: string, updates: Partial<TeamMember>): Promise<TeamMember | undefined> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ name: updates.name, active: updates.active })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) { toast.error('Failed to update'); return undefined; }
+    toast.success('Updated successfully');
+    return mapProfile(data);
+  },
+
+  // ── Remove employee (demote back to business_user) ───────────
   deleteTeamMember: async (id: string): Promise<boolean> => {
-    await delay(500);
-    const initialLength = teamMembers.length;
-    teamMembers = teamMembers.filter(member => member.id !== id);
-    
-    if (teamMembers.length < initialLength) {
-      saveTeamMembers(teamMembers);
-      toast.success("Team member deleted successfully");
-      return true;
-    }
-    
-    toast.error("Failed to delete team member");
-    return false;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: 'business_user' })
+      .eq('id', id);
+
+    if (error) { toast.error('Failed to remove employee'); return false; }
+    toast.success('Employee removed');
+    return true;
   },
 
-  // Assign lead to team member
+  // ── Assign lead to employee (delegates to leadsService) ──────
   assignLeadToTeamMember: async (teamMemberId: string, leadId: string): Promise<TeamMember | undefined> => {
-    await delay(400);
-    const index = teamMembers.findIndex(member => member.id === teamMemberId);
-    
-    if (index !== -1) {
-      if (!teamMembers[index].assignedLeads.includes(leadId)) {
-        teamMembers[index].assignedLeads = [...teamMembers[index].assignedLeads, leadId];
-        saveTeamMembers(teamMembers);
-        toast.success(`Lead assigned to ${teamMembers[index].name}`);
-      }
-      return teamMembers[index];
-    }
-    
-    toast.error("Failed to assign lead to team member");
-    return undefined;
+    // Actual assignment is in leadsService; this just returns the updated member
+    return teamService.getTeamMemberById(teamMemberId);
   },
 
-  // Remove lead assignment from team member
+  // ── Remove lead assignment ───────────────────────────────────
   removeLeadAssignment: async (teamMemberId: string, leadId: string): Promise<TeamMember | undefined> => {
-    await delay(400);
-    const index = teamMembers.findIndex(member => member.id === teamMemberId);
-    
-    if (index !== -1) {
-      teamMembers[index].assignedLeads = teamMembers[index].assignedLeads.filter(id => id !== leadId);
-      saveTeamMembers(teamMembers);
-      toast.success("Lead assignment removed");
-      return teamMembers[index];
-    }
-    
-    toast.error("Failed to remove lead assignment");
-    return undefined;
+    const { error } = await supabase
+      .from('queries')
+      .update({ assigned_to_id: null })
+      .eq('id', leadId)
+      .eq('assigned_to_id', teamMemberId);
+
+    if (error) { toast.error('Failed to remove assignment'); return undefined; }
+    return teamService.getTeamMemberById(teamMemberId);
   },
 
-  // Get team members assigned to a specific lead
-  getTeamMembersForLead: async (leadId: string): Promise<TeamMember[]> => {
-    await delay(300);
-    return teamMembers.filter(member => member.assignedLeads.includes(leadId));
-  },
-
-  // Find team member with the least number of assigned leads
+  // ── Get team member with fewest active leads ──────────────────
   getNextAvailableTeamMember: async (): Promise<TeamMember | undefined> => {
-    await delay(300);
-    const activeMembers = teamMembers.filter(member => member.active);
-    
-    if (activeMembers.length === 0) return undefined;
-    
-    return activeMembers.reduce((prev, current) => {
-      return prev.assignedLeads.length <= current.assignedLeads.length ? prev : current;
-    });
-  }
+    const members = await teamService.getTeamMembers();
+    if (members.length === 0) return undefined;
+    return members.reduce((prev, curr) =>
+      prev.assignedLeads.length <= curr.assignedLeads.length ? prev : curr
+    );
+  },
+
+  // ── Get team members for a lead ───────────────────────────────
+  getTeamMembersForLead: async (leadId: string): Promise<TeamMember[]> => {
+    const { data } = await supabase.from('queries').select('assigned_to_id').eq('id', leadId).single();
+    if (!data?.assigned_to_id) return [];
+    const member = await teamService.getTeamMemberById(data.assigned_to_id);
+    return member ? [member] : [];
+  },
 };

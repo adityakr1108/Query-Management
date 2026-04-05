@@ -58,23 +58,15 @@ const AdminDashboard = () => {
   const [filteredLeads, setFilteredLeads] = useState<any[]>([]);
   const [isLoadingLeads, setIsLoadingLeads] = useState(true);
   
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: "New lead assigned to your team", time: "5 min ago", read: false },
-    { id: 2, text: "Team meeting scheduled for tomorrow", time: "2 hours ago", read: false },
-    { id: 3, text: "Monthly report is ready for review", time: "Yesterday", read: true },
-  ]);
+  const [notifications, setNotifications] = useState<{id: number; text: string; time: string; read: boolean}[]>([]);
   
-  const [unreadNotifications, setUnreadNotifications] = useState(2);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [tasksCompleted, setTasksCompleted] = useState(0);
   const [taskProgress, setTaskProgress] = useState(0);
   
   const [showCalendar, setShowCalendar] = useState(false);
-  const [events, setEvents] = useState([
-    { id: 1, title: "Team Meeting", date: "Today, 2:00 PM", priority: "high" },
-    { id: 2, title: "Client Call", date: "Tomorrow, 10:30 AM", priority: "medium" },
-    { id: 3, title: "Strategy Review", date: "Sept 16, 9:00 AM", priority: "low" },
-  ]);
+  const [events, setEvents] = useState<{id: number; title: string; date: string; priority: string}[]>([]);
 
   const fetchLeads = async () => {
     setIsLoadingLeads(true);
@@ -128,7 +120,7 @@ const AdminDashboard = () => {
     setFilteredLeads(filtered);
   }, [searchQuery, statusFilter, guestFilter, leads]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     toast({
       title: "Logged out",
       description: "You have been logged out successfully",

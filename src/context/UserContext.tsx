@@ -1,54 +1,91 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import type { UserRole } from '@/lib/supabase';
 
-// Define user type
-type User = {
+export type User = {
   id: string;
   name: string;
   email: string;
-  role: 'user' | 'admin';
+  role: UserRole;
+  companyName?: string;
 };
 
 type UserContextType = {
   user: User | null;
-  login: (userData: User) => void;
-  logout: () => void;
   isAuthenticated: boolean;
+  isLoading: boolean;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-export const UserProvider: React.FC<{children: ReactNode}> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const storedUser = localStorage.getItem('leadflow_user');
-    return storedUser ? JSON.parse(storedUser) : null;
-  });
+export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Effect to monitor local storage changes (helps with multiple tabs)
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'leadflow_user') {
-        const updatedUser = e.newValue ? JSON.parse(e.newValue) : null;
-        setUser(updatedUser);
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (data && !error) {
+        setUser({
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          role: data.role as UserRole,
+          companyName: data.company_name ?? undefined,
+        });
+      } else {
+        setUser(null);
       }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  const login = (userData: User) => {
-    localStorage.setItem('leadflow_user', JSON.stringify(userData));
-    setUser(userData);
+    } catch {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const logout = () => {
-    localStorage.removeItem('leadflow_user');
+  const refreshUser = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) await loadUserProfile(authUser.id);
+  };
+
+  useEffect(() => {
+    // Check existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        await loadUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
 
   return (
-    <UserContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <UserContext.Provider value={{ user, isAuthenticated: !!user, isLoading, logout, refreshUser }}>
       {children}
     </UserContext.Provider>
   );
