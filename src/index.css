@@ -1,3 +1,4 @@
+@import url('https://rsms.me/inter/inter.css');
 
 @tailwind base;
 @tailwind components;
@@ -138,6 +139,3 @@
 .inter-var {
   font-family: 'Inter var', sans-serif;
 }
-
-/* Loading Inter font */
-@import url('https://rsms.me/inter/inter.css');
