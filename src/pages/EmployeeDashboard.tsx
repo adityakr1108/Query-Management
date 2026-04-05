@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@/context/UserContext';
+import { supabase } from '@/lib/supabase';
 import { leadsService, Lead } from '@/utils/leadsService';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -37,7 +37,18 @@ const EmployeeDashboard = () => {
     }
   };
 
-  useEffect(() => { fetchLeads(); }, [user?.id]);
+  useEffect(() => {
+    fetchLeads();
+    
+    // Subscribe to realtime queries
+    const channel = leadsService.subscribeToQueries(() => {
+      fetchLeads();
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   const handleLogout = async () => {
     await logout();

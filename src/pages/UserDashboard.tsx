@@ -26,6 +26,7 @@ import MessageCenter from '@/components/messages/MessageCenter';
 import { useUser } from '@/context/UserContext';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { supabase } from '@/lib/supabase';
 import NewLeadForm from '@/components/NewLeadForm';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -68,6 +69,15 @@ const UserDashboard = () => {
 
   useEffect(() => {
     fetchLeads();
+    
+    // Subscribe to realtime queries
+    const channel = leadsService.subscribeToQueries(() => {
+      fetchLeads();
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   const handleLogout = async () => {

@@ -35,6 +35,7 @@ import LeadCard from '@/components/LeadCard';
 import MessageCenter from '@/components/messages/MessageCenter';
 import AIInsights from '@/components/ai/AIInsights';
 import TeamManagement from '@/components/team/TeamManagement';
+import { supabase } from '@/lib/supabase';
 import { Progress } from '@/components/ui/progress';
 
 const statusOptions: { value: LeadStatus | 'all'; label: string }[] = [
@@ -94,6 +95,15 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchLeads();
+    
+    // Subscribe to realtime queries
+    const channel = leadsService.subscribeToQueries(() => {
+      fetchLeads();
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {

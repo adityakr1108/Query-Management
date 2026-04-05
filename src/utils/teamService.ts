@@ -139,4 +139,12 @@ export const teamService = {
     const member = await teamService.getTeamMemberById(data.assigned_to_id);
     return member ? [member] : [];
   },
+
+  // ── Realtime Subscriptions ──────────────────────────────────
+  subscribeToTeamMembers: (callback: () => void) => {
+    return supabase
+      .channel('profiles_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, callback)
+      .subscribe();
+  }
 };

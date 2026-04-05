@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,6 +5,7 @@ import TeamMemberList from './TeamMemberList';
 import { Lead, leadsService } from '@/utils/leadsService';
 import { TeamMember, teamService } from '@/utils/teamService';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 import LeadCard from '@/components/LeadCard';
 import { Button } from '@/components/ui/button';
 import { BarChart, Users, RefreshCcw, UserPlus } from 'lucide-react';
@@ -17,7 +17,13 @@ const TeamManagement = () => {
   const [selectedTeamMember, setSelectedTeamMember] = useState<TeamMember | null>(null);
   const [assignedLeads, setAssignedLeads] = useState<Lead[]>([]);
   const [isLoadingAssigned, setIsLoadingAssigned] = useState(false);
+  const [team, setTeam] = useState<TeamMember[]>([]);
   
+  const fetchTeam = async () => {
+    const data = await teamService.getTeamMembers();
+    setTeam(data);
+  };
+
   const fetchUnassignedLeads = async () => {
     setIsLoadingLeads(true);
     try {
@@ -50,6 +56,16 @@ const TeamManagement = () => {
   
   useEffect(() => {
     fetchUnassignedLeads();
+    fetchTeam();
+    
+    // Subscribe to realtime profiles (employees)
+    const channel = teamService.subscribeToTeamMembers(() => {
+      fetchTeam();
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
   
   useEffect(() => {

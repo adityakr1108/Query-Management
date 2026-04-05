@@ -104,7 +104,22 @@ export const leadsService = {
       .single();
 
     if (error) { console.error(error); return undefined; }
-    return mapRow(data);
+    return data ? mapRow(data) : undefined;
+  },
+
+  // ── Realtime Subscriptions ──────────────────────────────────
+  subscribeToQueries: (callback: () => void) => {
+    return supabase
+      .channel('queries_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'queries' }, callback)
+      .subscribe();
+  },
+
+  subscribeToTeamMembers: (callback: () => void) => {
+    return supabase
+      .channel('profiles_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, callback)
+      .subscribe();
   },
 
   // ── Add a new lead ───────────────────────────────────────────
