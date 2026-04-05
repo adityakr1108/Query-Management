@@ -62,7 +62,7 @@ export const messageService = {
     return mapMsg(data);
   },
 
-  // ── Subscribe to new messages (Supabase Realtime) ────────────
+  // ── Subscribe to new messages for a specific query ───────────
   subscribeToMessages: (queryId: string, onNew: (msg: Message) => void) => {
     const channel = supabase
       .channel(`messages:${queryId}`)
@@ -73,6 +73,24 @@ export const messageService = {
           schema: 'public',
           table: 'messages',
           filter: `query_id=eq.${queryId}`,
+        },
+        (payload) => onNew(mapMsg(payload.new))
+      )
+      .subscribe();
+
+    return channel;
+  },
+
+  // ── Subscribe to ALL new messages (for badge updates) ────────
+  subscribeToAllMessages: (onNew: (msg: Message) => void) => {
+    const channel = supabase
+      .channel('all_messages_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
         },
         (payload) => onNew(mapMsg(payload.new))
       )
@@ -96,6 +114,27 @@ export const messageService = {
       .neq('sender_id', userId);
 
     return error ? 0 : (count ?? 0);
+  },
+
+  // ── Batch: get unread counts for multiple queries at once ────
+  getBatchUnreadCounts: async (queryIds: string[], userId: string): Promise<Record<string, number>> => {
+    if (queryIds.length === 0) return {};
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select('query_id')
+      .in('query_id', queryIds)
+      .eq('read', false)
+      .neq('sender_id', userId);
+
+    if (error || !data) return {};
+
+    // Count occurrences per query_id
+    const counts: Record<string, number> = {};
+    for (const row of data) {
+      counts[row.query_id] = (counts[row.query_id] || 0) + 1;
+    }
+    return counts;
   },
 
   // ── Mark all messages in a query as read ─────────────────────

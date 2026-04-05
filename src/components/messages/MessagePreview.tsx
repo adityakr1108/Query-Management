@@ -47,7 +47,9 @@ const MessagePreview = ({ lead, isLoading = false }: MessagePreviewProps) => {
     channel = messageService.subscribeToMessages(lead.id, (newMsg) => {
       setMessages(prev => {
         if (prev.some(m => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
+        // Also remove any optimistic placeholder that matches this message
+        const withoutOptimistic = prev.filter(m => !m.id.startsWith('optimistic-'));
+        return [...withoutOptimistic, newMsg];
       });
     });
 
@@ -63,15 +65,31 @@ const MessagePreview = ({ lead, isLoading = false }: MessagePreviewProps) => {
 
   const handleSend = async () => {
     if (!lead || !user || !text.trim()) return;
+    const messageText = text.trim();
+    setText('');
+
+    // Optimistic: immediately show the message locally
+    const optimisticMsg: Message = {
+      id: `optimistic-${Date.now()}`,
+      queryId: lead.id,
+      senderId: user.id,
+      senderName: user.name,
+      senderRole: user.role,
+      text: messageText,
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+
+    // Fire-and-forget: send to server (realtime will reconcile)
     setIsSending(true);
     await messageService.sendMessage(
       lead.id,
       user.id,
       user.name,
       user.role,
-      text.trim()
+      messageText
     );
-    setText('');
     setIsSending(false);
   };
 
@@ -150,8 +168,9 @@ const MessagePreview = ({ lead, isLoading = false }: MessagePreviewProps) => {
             <div className="space-y-4">
               {messages.map((msg) => {
                 const isMe = msg.senderId === user?.id;
+                const isOptimistic = msg.id.startsWith('optimistic-');
                 return (
-                  <div key={msg.id} className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div key={msg.id} className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'} ${isOptimistic ? 'opacity-70' : ''}`}>
                     <Avatar className="h-7 w-7 flex-shrink-0">
                       <AvatarFallback className={`text-xs font-medium ${isMe ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                         {msg.senderName.charAt(0).toUpperCase()}

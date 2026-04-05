@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { leadsService, Lead } from '@/utils/leadsService';
 import { messageService } from '@/utils/messageService';
 import { useUser } from '@/context/UserContext';
+import { supabase } from '@/lib/supabase';
 import {
   Search, MessagesSquare, User, UserCheck, Inbox, RefreshCcw
 } from 'lucide-react';
@@ -60,14 +61,10 @@ const MessageCenter = ({
         setSelectedLead(allLeads[0]);
       }
 
-      // Fetch unread counts
-      if (user) {
-        const counts: Record<string, number> = {};
-        await Promise.all(
-          allLeads.map(async (lead) => {
-            counts[lead.id] = await messageService.getUnreadCount(lead.id, user.id);
-          })
-        );
+      // Batch-fetch all unread counts in a single query
+      if (user && allLeads.length > 0) {
+        const ids = allLeads.map(l => l.id);
+        const counts = await messageService.getBatchUnreadCounts(ids, user.id);
         setUnreadCounts(counts);
       }
     } catch (error) {
@@ -79,6 +76,21 @@ const MessageCenter = ({
 
   useEffect(() => {
     fetchLeads();
+
+    // Subscribe to ALL new messages so unread badges update in real-time
+    const channel = messageService.subscribeToAllMessages((newMsg) => {
+      // If someone else sent it, bump the unread count for that query
+      if (user && newMsg.senderId !== user.id) {
+        setUnreadCounts(prev => ({
+          ...prev,
+          [newMsg.queryId]: (prev[newMsg.queryId] || 0) + 1,
+        }));
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [isUserDashboard, isEmployeeDashboard, user?.id, employeeId]);
 
   useEffect(() => {
