@@ -72,7 +72,7 @@ export const teamService = {
     }
 
     // Fetch the newly promoted profile
-    const { data } = await supabase.from('profiles').select('*').eq('email', member.email).single();
+    const { data } = await supabase.from('profiles').select('*').eq('email', member.email).maybeSingle();
     if (!data) return undefined;
 
     toast.success(`${data.name} added as employee`);
