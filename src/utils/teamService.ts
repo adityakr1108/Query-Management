@@ -63,17 +63,21 @@ export const teamService = {
   },
 
   // ── Promote a user to employee by email ──────────────────────
-  addTeamMember: async (member: { email: string; name: string; role: string; active: boolean }): Promise<TeamMember | undefined> => {
-    // Promote the user with this email to 'employee' role
-    const { error } = await supabase.rpc('promote_to_employee', { target_email: member.email });
+  addTeamMember: async (member: Omit<TeamMember, 'id' | 'assignedLeads'>): Promise<TeamMember | undefined> => {
+    const targetEmail = member.email.trim().toLowerCase();
+    const { error } = await supabase.rpc('promote_to_employee', { target_email: targetEmail });
+
     if (error) {
       toast.error(`Could not promote: ${error.message}`);
-      return undefined;
+      throw new Error(error.message);
     }
 
     // Fetch the newly promoted profile
-    const { data } = await supabase.from('profiles').select('*').eq('email', member.email).maybeSingle();
-    if (!data) return undefined;
+    const { data } = await supabase.from('profiles').select('*').eq('email', targetEmail).maybeSingle();
+    if (!data) {
+      toast.error(`User does not exist in the system yet. They must sign up first.`);
+      throw new Error("User profile not found");
+    }
 
     toast.success(`${data.name} added as employee`);
     return mapProfile(data, []);
